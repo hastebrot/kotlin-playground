@@ -4,14 +4,11 @@ import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.graph.SimpleGraph
 
 fun main(args: Array<String>) {
-    val graph0 = buildGraph()
-    println(graph0)
-
-    val graph1 = buildGraphFromAdjacencyLists()
-    println(graph1)
+    sampleGraphSets()
+    sampleGraphMapList()
 }
 
-private fun buildGraph(): SimpleGraph<*, *> {
+private fun sampleGraphSets() {
     val nodes = setOf("a", "b", "c", "d", "e")
     val edges = setOf(
         "a" to "b",
@@ -22,13 +19,11 @@ private fun buildGraph(): SimpleGraph<*, *> {
         "c" to "d"
     )
 
-    val graph = SimpleGraph<String, DefaultEdge>(DefaultEdge::class.java)
-    nodes.forEach { graph.addVertex(it) }
-    edges.forEach { graph.addEdge(it.first, it.second) }
-    return graph
+    val graph = buildGraph(nodes, edges)
+    println(graph)
 }
 
-private fun buildGraphFromAdjacencyLists(): SimpleGraph<*, *> {
+private fun sampleGraphMapList() {
     val adjacencyList: Map<String, List<String>> = mapOf(
         "a" to listOf("b", "d", "d", "e"),
         "b" to listOf("c", "a"),
@@ -36,17 +31,22 @@ private fun buildGraphFromAdjacencyLists(): SimpleGraph<*, *> {
         "d" to listOf("a", "a", "c"),
         "e" to listOf("a")
     )
+    val graph = buildGraph(adjacencyList)
+    println(graph)
+}
 
-    val graph = SimpleGraph<String, DefaultEdge>(DefaultEdge::class.java)
+private fun <T> buildGraph(nodes: Set<T>,
+                           edges: Set<Pair<T, T>>): SimpleGraph<T, DefaultEdge> {
 
-//    for ((source, targets) in adjacencyList) {
-//        graph.addVertex(source)
-//    }
-//    for ((source, targets) in adjacencyList) {
-//        for (target in targets) {
-//            graph.addEdge(source, target)
-//        }
-//    }
+    val graph = SimpleGraph<T, DefaultEdge>(DefaultEdge::class.java)
+    nodes.forEach { graph.addVertex(it) }
+    edges.forEach { graph.addEdge(it.first, it.second) }
+    return graph
+}
+
+private fun <T> buildGraph(adjacencyList: Map<T, List<T>>):
+        SimpleGraph<T, DefaultEdge> {
+    val graph = SimpleGraph<T, DefaultEdge>(DefaultEdge::class.java)
 
     adjacencyList.keys.forEach { source ->
         graph.addVertex(source)
@@ -56,6 +56,15 @@ private fun buildGraphFromAdjacencyLists(): SimpleGraph<*, *> {
             graph.addEdge(source, target)
         }
     }
+
+//    for ((source, targets) in adjacencyList) {
+//        graph.addVertex(source)
+//    }
+//    for ((source, targets) in adjacencyList) {
+//        for (target in targets) {
+//            graph.addEdge(source, target)
+//        }
+//    }
 
 //    adjacencyList.map { it.key }
 //        .forEach { graph.addVertex(it) }
