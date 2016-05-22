@@ -48,15 +48,6 @@ private fun <T> buildGraph(adjacencyList: Map<T, List<T>>):
         SimpleGraph<T, DefaultEdge> {
     val graph = SimpleGraph<T, DefaultEdge>(DefaultEdge::class.java)
 
-    adjacencyList.keys.forEach { source ->
-        graph.addVertex(source)
-    }
-    adjacencyList.entries.forEach { source, targets ->
-        targets.forEach { target ->
-            graph.addEdge(source, target)
-        }
-    }
-
 //    for ((source, targets) in adjacencyList) {
 //        graph.addVertex(source)
 //    }
@@ -66,13 +57,25 @@ private fun <T> buildGraph(adjacencyList: Map<T, List<T>>):
 //        }
 //    }
 
-//    adjacencyList.map { it.key }
-//        .forEach { graph.addVertex(it) }
-//    adjacencyList.flatMap { it -> it.value.map { itt -> it.key to itt } }
-//        .forEach { graph.addEdge(it.first, it.second) }
+    adjacencyList.keys.forEach { source ->
+        graph.addVertex(source)
+    }
+    adjacencyList.entries.forEach { source, targets ->
+        targets.forEach { target ->
+            graph.addEdge(source, target)
+        }
+    }
+
+//    adjacencyList.map { entry -> entry.key }
+//        .forEach { source -> graph.addVertex(source) }
+//    adjacencyList.flatMap { entry -> entry.value.map { value -> entry.key to value } }
+//        .forEach { source, target -> graph.addEdge(source, target) }
 
     return graph
 }
 
 private inline fun <S, T> Set<Map.Entry<S, T>>.forEach(block: (S, T) -> Unit) =
     forEach { block(it.key, it.value) }
+
+private inline fun <S, T> Iterable<Pair<S, T>>.forEach(block: (S, T) -> Unit) =
+    forEach { block(it.first, it.second) }
