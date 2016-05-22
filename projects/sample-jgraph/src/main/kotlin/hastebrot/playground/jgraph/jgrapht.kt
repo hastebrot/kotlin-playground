@@ -60,7 +60,7 @@ private fun <T> buildGraph(adjacencyList: Map<T, List<T>>):
     adjacencyList.keys.forEach { source ->
         graph.addVertex(source)
     }
-    adjacencyList.entries.forEach { source, targets ->
+    adjacencyList.entries.forEachEntry { source, targets ->
         targets.forEach { target ->
             graph.addEdge(source, target)
         }
@@ -68,14 +68,15 @@ private fun <T> buildGraph(adjacencyList: Map<T, List<T>>):
 
 //    adjacencyList.map { entry -> entry.key }
 //        .forEach { source -> graph.addVertex(source) }
+//
 //    adjacencyList.flatMap { entry -> entry.value.map { value -> entry.key to value } }
-//        .forEach { source, target -> graph.addEdge(source, target) }
+//        .forEachPair { source, target -> graph.addEdge(source, target) }
 
     return graph
 }
 
-private inline fun <S, T> Set<Map.Entry<S, T>>.forEach(block: (S, T) -> Unit) =
-    forEach { block(it.key, it.value) }
+private inline fun <S, T> Iterable<Map.Entry<S, T>>.forEachEntry(action: (S, T) -> Unit) =
+    forEach { action(it.key, it.value) }
 
-private inline fun <S, T> Iterable<Pair<S, T>>.forEach(block: (S, T) -> Unit) =
-    forEach { block(it.first, it.second) }
+private inline fun <S, T> Iterable<Pair<S, T>>.forEachPair(action: (S, T) -> Unit) =
+    forEach { action(it.first, it.second) }
