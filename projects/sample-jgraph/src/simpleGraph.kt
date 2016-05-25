@@ -1,5 +1,3 @@
-package hastebrot.playground.jgraph
-
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.graph.SimpleGraph
 

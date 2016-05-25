@@ -12,8 +12,8 @@ fun main(args: Array<String>) {
     val t = graph.traversal()
     println(t.V().has("name", "vadas").valueMap<Any>().toList())
 
-    val s = graph.traversal().withComputer()
-    println(s.withPath())
+    val c = graph.traversal().withComputer()
+    println(c.withPath())
 
     val customGraph = TinkerGraph.open()
     val tom = customGraph.addVertex(T.id, 1)

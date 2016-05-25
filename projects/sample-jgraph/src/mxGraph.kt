@@ -1,5 +1,3 @@
-package hastebrot.playground.jgraph
-
 import com.mxgraph.swing.mxGraphComponent
 import com.mxgraph.view.mxGraph
 import javafx.application.Application
