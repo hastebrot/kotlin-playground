@@ -1,0 +1,107 @@
+//-------------------------------------------------------------------------------------------------
+// PLUGINS.
+//-------------------------------------------------------------------------------------------------
+
+buildscript {
+    repositories {
+        jcenter()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${project.ext.kotlinVersion}"
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:${project.ext.dokkaVersion}"
+    }
+}
+
+apply(plugin: "kotlin")
+apply(plugin: "org.jetbrains.dokka")
+
+//-------------------------------------------------------------------------------------------------
+// SOURCE SETS.
+//-------------------------------------------------------------------------------------------------
+
+sourceSets {
+    main {
+        java.srcDirs = ["src"]
+        kotlin.srcDirs = ["src"]
+        resources.srcDirs = ["src"]
+    }
+    test {
+        java.srcDirs = ["test"]
+        kotlin.srcDirs = ["test"]
+        resources.srcDirs = ["test"]
+    }
+}
+//-------------------------------------------------------------------------------------------------
+// REPOSITORIES.
+//-------------------------------------------------------------------------------------------------
+
+repositories {
+    jcenter()
+    mavenCentral()
+}
+
+//-------------------------------------------------------------------------------------------------
+// DEPENDENCIES.
+//-------------------------------------------------------------------------------------------------
+
+// main source dependencies.
+dependencies {
+    // kotlin standard library.
+    compile "org.jetbrains.kotlin:kotlin-stdlib:${project.ext.kotlinVersion}"
+    compile "org.jetbrains.kotlin:kotlin-reflect:${project.ext.kotlinVersion}"
+
+    // object-relational mapper.
+    compile "io.requery:requery:1.0.0-beta19"
+    kapt "io.requery:requery-processor:1.0.0-beta19"
+
+    // rx reactive extensions.
+    compile "io.reactivex:rxjava:1.1.5"
+
+    // java persistence api.
+    compile "org.eclipse.persistence:javax.persistence:2.1.1"
+//    compile "javax.persistence:persistence-api:1.0"
+
+    // java cache api.
+    compile "javax.cache:cache-api:1.0.0"
+    compile "org.ehcache:ehcache:3.0.1"
+
+    // java transaction api.
+    compile "javax.transaction:javax.transaction-api:1.2"
+
+    // jdbc connection pool.
+    compile "com.zaxxer:HikariCP:2.4.5"
+//    compile "org.vibur:vibur-dbcp:9.0"
+
+    // h2 database driver.
+    compile "com.h2database:h2:1.4.191"
+
+    // apache logger.
+    compile "org.apache.logging.log4j:log4j-api:2.3"
+    compile "org.apache.logging.log4j:log4j-core:2.3"
+
+    // apache logger adapters.
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:2.3"
+//    compile "org.apache.logging.log4j:log4j-jul:2.3"
+//    compile "org.apache.logging.log4j:log4j-jcl:2.3"
+//    compile "org.apache.logging.log4j:log4j-1.2-api:2.3"
+}
+
+// test source dependencies.
+dependencies {
+    // test framework.
+    testCompile "junit:junit:4.12"
+    testCompile "org.jetbrains.kotlin:kotlin-test:${project.ext.kotlinVersion}"
+}
+
+//-------------------------------------------------------------------------------------------------
+// CONFIGURATION.
+//-------------------------------------------------------------------------------------------------
+
+dokka {
+    outputFormat = "javadoc"
+}
+
+kapt {
+    generateStubs = true
+}
