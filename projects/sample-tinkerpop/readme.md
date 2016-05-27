@@ -1,3 +1,5 @@
+## Description
+
 Apache TinkerPop is a graph computing framework for both graph databases (OLTP; On-line
 Transaction Processing) and graph analytic systems (OLAP; On-line Analytical Processing).
 
@@ -10,7 +12,7 @@ With TinkerPop3, all of these projects have been merged and are generally known 
 **Blueprints** → Gremlin Structure API, **Pipes** → `GraphTraversal`, **Frames** → `Traversal`,
 **Furnace** → `GraphComputer` and `VertexProgram`, **Rexster** → GremlinServer.
 
-### Packages
+## Packages
 
 - `org.apache.tinkerpop.gremlin.structure`
   - `Graph`, `Element`, `Vertex`, `Edge`, `Property<V>`, `VertexProperty<V>`
