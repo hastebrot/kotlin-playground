@@ -35,7 +35,6 @@ private fun sampleGraphMapList() {
 
 private fun <T> buildGraph(nodes: Set<T>,
                            edges: Set<Pair<T, T>>): SimpleGraph<T, DefaultEdge> {
-
     val graph = SimpleGraph<T, DefaultEdge>(DefaultEdge::class.java)
     nodes.forEach { graph.addVertex(it) }
     edges.forEach { graph.addEdge(it.first, it.second) }
@@ -76,5 +75,9 @@ private inline fun <A, B> Iterable<Pair<A, B>>.forEachPair(action: (A, B) -> Uni
     forEach { action(it.first, it.second) }
 
 private val <K, V> Map<K, List<V>>.pairs: Iterable<Pair<K, V>>
-    get() = flatMap { entry -> entry.value.map { value -> entry.key to value } }
+    get() = flatMap { entry ->
+        entry.value.map { value ->
+            entry.key to value
+        }
+    }
 
