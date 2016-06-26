@@ -1,4 +1,4 @@
-package requery.person.entity
+package requery.person.personEntity
 
 import io.requery.Persistable
 import io.requery.query.MutableResult
@@ -9,6 +9,8 @@ import java.util.Optional
 import java.util.UUID
 import javax.persistence.CascadeType
 import javax.persistence.Column
+import javax.persistence.Embeddable
+import javax.persistence.Embedded
 import javax.persistence.Entity
 import javax.persistence.ForeignKey
 import javax.persistence.GeneratedValue
@@ -33,6 +35,9 @@ interface Address : Serializable {
     var line2: String
     var state: String
 
+    @get:Embedded
+    val coordinate: Coordinate
+
     @get:Column(length = 5)
     var zip: String
 
@@ -50,6 +55,15 @@ interface Address : Serializable {
 enum class AddressType {
     HOME,
     WORK,
+}
+
+@Embeddable
+interface Coordinate {
+    @get:Column(nullable = false)
+    var latitude: Float
+
+    @get:Column(nullable = false)
+    var longitude: Float
 }
 
 @Entity

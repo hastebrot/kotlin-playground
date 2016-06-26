@@ -16,9 +16,9 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.LoggerContext
 import org.apache.logging.log4j.core.appender.ConsoleAppender
 import org.apache.logging.log4j.core.layout.PatternLayout
-import requery.person.entity.AddressEntity
-import requery.person.entity.Models
-import requery.person.entity.PersonEntity
+import requery.person.personEntity.AddressEntity
+import requery.person.personEntity.Models
+import requery.person.personEntity.PersonEntity
 import rx.schedulers.Schedulers
 import java.sql.Statement
 import javax.cache.Caching
@@ -28,7 +28,7 @@ fun main(args: Array<String>) {
     configureRootLogger(Level.OFF)
 
     val dataSource = buildDataSource()
-    val entityModel = Models.ENTITY
+    val entityModel = Models.PERSONENTITY
 
     val dataStoreConfig = buildDataStoreConfig(dataSource, entityModel)
     val dataStore = EntityDataStore<Persistable>(dataStoreConfig)
@@ -40,6 +40,12 @@ fun main(args: Array<String>) {
 }
 
 private fun runSamples(dataStore: EntityDataStore<Persistable>) {
+    Models.PERSONENTITY
+        .typeOf(PersonEntity::class.java)
+        .attributes
+        .associateBy { it.name }
+        .let { println(it) }
+
     dataStore.insert(PersonEntity().apply {
         age = 30
         address = AddressEntity().apply {
@@ -68,20 +74,15 @@ private fun runSamples(dataStore: EntityDataStore<Persistable>) {
         .get()
     selectResult.toObservable()
         .subscribeOn(Schedulers.io())
+        .toBlocking()
         .subscribe { println(it) }
 
     val selectResult2 = dataStore.select(PersonEntity::class.java)
         .get()
     selectResult2.toObservable()
         .subscribe {
-            println(PersonEntity.AGE.property().get(it))
+            println(PersonEntity.AGE.property[it])
         }
-
-    Models.ENTITY
-        .typeOf(PersonEntity::class.java)
-        .attributes()
-        .associateBy { it.name() }
-        .let { println(it) }
 }
 
 private fun buildDataStoreConfig(dataSource: DataSource,

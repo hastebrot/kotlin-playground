@@ -37,6 +37,9 @@ sourceSets {
 //-------------------------------------------------------------------------------------------------
 
 repositories {
+    if (project.hasProperty("maven.local")) {
+        mavenLocal()
+    }
     jcenter()
     mavenCentral()
 }
@@ -52,8 +55,8 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:${project.ext.kotlinVersion}"
 
     // object-relational mapper.
-    compile "io.requery:requery:1.0.0-beta19"
-    kapt "io.requery:requery-processor:1.0.0-beta19"
+    compile "io.requery:requery:1.0.0-beta23"
+    kapt "io.requery:requery-processor:1.0.0-beta23"
 
     // rx reactive extensions.
     compile "io.reactivex:rxjava:1.1.5"
@@ -75,6 +78,8 @@ dependencies {
 
     // h2 database driver.
     compile "com.h2database:h2:1.4.191"
+    compile "net.sourceforge.jtds:jtds:1.3.1"
+    compile "com.microsoft.sqlserver:sqljdbc42:4.2"
 
     // apache logger.
     compile "org.apache.logging.log4j:log4j-api:2.3"
