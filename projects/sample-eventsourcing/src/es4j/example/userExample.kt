@@ -4,6 +4,8 @@ package es4j.example
 //compile "com.eventsourcing:eventsourcing-inmem:0.4.0-SNAPSHOT"
 //compile "com.eventsourcing:eventsourcing-h2:0.4.0-SNAPSHOT"
 
+import com.eventsourcing.Entity
+import com.eventsourcing.EntityHandle
 import com.eventsourcing.Event
 import com.eventsourcing.Model
 import com.eventsourcing.Repository
@@ -15,9 +17,11 @@ import com.eventsourcing.index.IndexEngine.IndexFeature.UNIQUE
 import com.eventsourcing.index.MemoryIndexEngine
 import com.eventsourcing.index.SimpleAttribute
 import com.eventsourcing.inmem.MemoryJournal
+import com.eventsourcing.repository.EntitySubscriber
 import com.googlecode.cqengine.query.QueryFactory.equal
 import com.googlecode.cqengine.query.option.QueryOptions
 import java.util.UUID
+import java.util.stream.Collectors
 import java.util.stream.Stream
 
 //-------------------------------------------------------------------------------------------------
@@ -25,16 +29,25 @@ import java.util.stream.Stream
 //-------------------------------------------------------------------------------------------------
 
 fun main(args: Array<String>) {
+    // The repository glues journals, indexing and subscribers together.
     val repository = Repository.create()
     val journal = MemoryJournal()
     val index = MemoryIndexEngine()
 
     repository.journal = journal
     repository.indexEngine = index
-//    repository.physicalTimeProvider = NTPServerTimeProvider()
+    repository.addEntitySubscriber(object : EntitySubscriber<Entity<*>> {
+        override fun onEntity(entity: EntityHandle<Entity<*>>) {
+            println(entity.get())
+        }
+    })
     repository.startAsync().awaitRunning()
 
-    val createUser = CreateUser()
+    // Hybrid Logical Clocks - timestamps every command and event.
+    // LMAX Disruptor - process commands
+    // CQEngine - command and event indices
+
+    val createUser = CreateUser0()
     val user = repository.publish(createUser).get()
     println(user)
 }
@@ -74,6 +87,40 @@ class CreateUser() : StandardCommand<User>() {
     override fun onCompletion(): User? {
         return User.lookup(repository, id)
     }
+
+    override fun toString() = "${javaClass.simpleName}(${uuid()})"
+}
+
+class CreateUser0() : StandardCommand0<User, Event>() {
+    override fun events0(repository: Repository): Stream<Event> {
+        return Stream.of(UserCreated())
+    }
+
+    override fun onComplete0(repository: Repository,
+                            event: Event): User? {
+        return User.lookup(repository, event.uuid())
+    }
+
+    override fun toString() = "${javaClass.simpleName}(${uuid()})"
+}
+
+abstract class StandardCommand0<R, E: Event> : StandardCommand<R>() {
+    lateinit private var lastRepository: Repository
+    lateinit private var lastEvent: E
+
+    override fun events(repository: Repository): Stream<E> {
+        val stream = events0(repository)
+        val streamList = stream.collect(Collectors.toList<E>())
+        lastRepository = repository
+        lastEvent = streamList.last()
+        val streamBuilder = Stream.builder<E>()
+        streamList.forEach { streamBuilder.add(it) }
+        return streamBuilder.build()
+    }
+    override fun onCompletion(): R? = onComplete0(lastRepository, lastEvent)
+
+    abstract fun events0(repository: Repository): Stream<E>
+    abstract fun onComplete0(repository: Repository, event: E): R?
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -81,9 +128,11 @@ class CreateUser() : StandardCommand<User>() {
 //-------------------------------------------------------------------------------------------------
 
 class UserCreated : StandardEvent() {
+    override fun toString() = "${javaClass.simpleName}(${uuid()})"
+
     companion object {
         @Index(EQ, UNIQUE)
-        val ID = object : SimpleAttribute<UserCreated, UUID>("id") { // issue: type inference.
+        val ID = object : SimpleAttribute<UserCreated, UUID>("id") {
             override fun getValue(userCreated: UserCreated,
                                   queryOptions: QueryOptions): UUID {
                 return userCreated.uuid()
@@ -91,3 +140,4 @@ class UserCreated : StandardEvent() {
         }
     }
 }
+
