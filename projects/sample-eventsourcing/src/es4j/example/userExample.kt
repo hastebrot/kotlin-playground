@@ -6,7 +6,7 @@ package es4j.example
 
 import com.eventsourcing.Entity
 import com.eventsourcing.EntityHandle
-import com.eventsourcing.Event
+import com.eventsourcing.EventStream
 import com.eventsourcing.Model
 import com.eventsourcing.Repository
 import com.eventsourcing.StandardCommand
@@ -21,8 +21,6 @@ import com.eventsourcing.repository.EntitySubscriber
 import com.googlecode.cqengine.query.QueryFactory.equal
 import com.googlecode.cqengine.query.option.QueryOptions
 import java.util.UUID
-import java.util.stream.Collectors
-import java.util.stream.Stream
 
 //-------------------------------------------------------------------------------------------------
 // MAIN METHOD.
@@ -47,7 +45,7 @@ fun main(args: Array<String>) {
     // LMAX Disruptor - process commands
     // CQEngine - command and event indices
 
-    val createUser = CreateUser0()
+    val createUser = CreateUser()
     val user = repository.publish(createUser).get()
     println(user)
 }
@@ -75,52 +73,18 @@ data class User(private val repository: Repository,
 // COMMANDS.
 //-------------------------------------------------------------------------------------------------
 
-class CreateUser() : StandardCommand<User>() {
-    lateinit private var repository: Repository
-    lateinit private var id: UUID
-
-    override fun events(repository: Repository): Stream<Event> {
-        this.repository = repository
-        return Stream.of(UserCreated().apply { id = uuid() })
+class CreateUser() : StandardCommand<User, UserCreated>() {
+    override fun events(repository: Repository): EventStream<UserCreated> {
+        val state = UserCreated()
+        return EventStream.ofWithState(state, state)
     }
 
-    override fun onCompletion(): User? {
-        return User.lookup(repository, id)
-    }
-
-    override fun toString() = "${javaClass.simpleName}(${uuid()})"
-}
-
-class CreateUser0() : StandardCommand0<User, Event>() {
-    override fun events0(repository: Repository): Stream<Event> {
-        return Stream.of(UserCreated())
-    }
-
-    override fun onComplete0(repository: Repository,
-                            event: Event): User? {
-        return User.lookup(repository, event.uuid())
+    override fun onCompletion(userCreated: UserCreated,
+                              repository: Repository): User? {
+        return User.lookup(repository, userCreated.uuid())
     }
 
     override fun toString() = "${javaClass.simpleName}(${uuid()})"
-}
-
-abstract class StandardCommand0<R, E: Event> : StandardCommand<R>() {
-    lateinit private var lastRepository: Repository
-    lateinit private var lastEvent: E
-
-    override fun events(repository: Repository): Stream<E> {
-        val stream = events0(repository)
-        val streamList = stream.collect(Collectors.toList<E>())
-        lastRepository = repository
-        lastEvent = streamList.last()
-        val streamBuilder = Stream.builder<E>()
-        streamList.forEach { streamBuilder.add(it) }
-        return streamBuilder.build()
-    }
-    override fun onCompletion(): R? = onComplete0(lastRepository, lastEvent)
-
-    abstract fun events0(repository: Repository): Stream<E>
-    abstract fun onComplete0(repository: Repository, event: E): R?
 }
 
 //-------------------------------------------------------------------------------------------------
