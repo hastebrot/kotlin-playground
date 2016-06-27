@@ -7,7 +7,6 @@ package es4j.example
 import com.eventsourcing.Entity
 import com.eventsourcing.EntityHandle
 import com.eventsourcing.EventStream
-import com.eventsourcing.Model
 import com.eventsourcing.Repository
 import com.eventsourcing.StandardCommand
 import com.eventsourcing.StandardEvent
@@ -42,23 +41,27 @@ fun main(args: Array<String>) {
     repository.startAsync().awaitRunning()
 
     // Hybrid Logical Clocks - timestamps every command and event.
-    // LMAX Disruptor - process commands
-    // CQEngine - command and event indices
+    // LMAX Disruptor - processes commands.
+    // CQEngine - indexes commands and events.
 
     val createUser = CreateUser()
     val user = repository.publish(createUser).get()
     println(user)
+
+//    repository.stopAsync()
 }
 
 //-------------------------------------------------------------------------------------------------
 // MODELS.
 //-------------------------------------------------------------------------------------------------
 
-data class User(private val repository: Repository,
-                private val id: UUID) : Model {
-    override fun getRepository() = repository
-    override fun id() = id
+interface Model {
+    val repository: Repository
+    val id: UUID
+}
 
+data class User(override val repository: Repository,
+                override val id: UUID) : Model {
     companion object {
         fun lookup(repository: Repository,
                    id: UUID): User? {
@@ -75,8 +78,8 @@ data class User(private val repository: Repository,
 
 class CreateUser() : StandardCommand<User, UserCreated>() {
     override fun events(repository: Repository): EventStream<UserCreated> {
-        val state = UserCreated()
-        return EventStream.ofWithState(state, state)
+        val userCreated = UserCreated()
+        return EventStream.ofWithState(userCreated, userCreated)
     }
 
     override fun onCompletion(userCreated: UserCreated,
