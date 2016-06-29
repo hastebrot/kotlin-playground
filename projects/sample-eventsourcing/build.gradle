@@ -55,7 +55,7 @@ repositories {
 dependencies {
     // kotlin standard library.
     compile "org.jetbrains.kotlin:kotlin-stdlib:${project.ext.kotlinVersion}"
-    compile "org.jetbrains.kotlin:kotlin-reflect:${project.ext.kotlinVersion}"
+//    compile "org.jetbrains.kotlin:kotlin-reflect:${project.ext.kotlinVersion}"
 
     // es4j dependencies.
     compile "com.eventsourcing:eventsourcing-core:0.4.0-SNAPSHOT"
