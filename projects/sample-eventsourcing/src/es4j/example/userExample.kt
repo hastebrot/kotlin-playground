@@ -30,30 +30,35 @@ import kotlin.reflect.KClass
 // MAIN METHOD.
 //-------------------------------------------------------------------------------------------------
 
+// Glossary
+// ========
+//
+// - Hybrid Logical Clocks: timestamp every command and event.
+// - LMAX Disruptor: processes commands.
+// - CQEngine: indexes commands and events.
+
 fun main(args: Array<String>) {
     // The repository glues journals, indexing and subscribers together.
     val repository = Repository.create()
     val journal = MemoryJournal()
+//    val journal = MVStoreJournal(MVStore.open("journal.h2"))
     val index = MemoryIndexEngine()
 
     repository.journal = journal
     repository.indexEngine = index
     repository.addEntitySubscriber(object : EntitySubscriber<Entity<*>> {
         override fun onEntity(entity: EntityHandle<Entity<*>>) {
-            println(entity.get())
+            println(entity.optional.orElseGet { null })
         }
     })
     repository.startAsync().awaitRunning()
 
-    // Hybrid Logical Clocks - timestamps every command and event.
-    // LMAX Disruptor - processes commands.
-    // CQEngine - indexes commands and events.
-
-    val createUser = CreateUser()
+    val createUser = CreateUser("foobar")
     val user = repository.publish(createUser).get()
     println(user)
 
-//    repository.stopAsync()
+    repository.stopAsync().awaitTerminated()
+    System.exit(0)
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -62,11 +67,11 @@ fun main(args: Array<String>) {
 
 data class User(override val repository: Repository,
                 override val id: UUID) : Model {
-    companion object {
+   companion object {
         fun lookup(repository: Repository,
                    id: UUID): User? {
             val result = repository.query(UserCreated::class) {
-                (UserCreated.ID equalTo id) and (UserCreated.NAME startsWith "user")
+                (UserCreated.ID equalTo id) //and (UserRenamed.NAME startsWith "user")
             }
             return result.use {
                 val userCreated = it.uniqueResult()
@@ -80,16 +85,29 @@ data class User(override val repository: Repository,
 // COMMANDS.
 //-------------------------------------------------------------------------------------------------
 
-class CreateUser() : StandardCommand<User, UserCreated>() {
+class CreateUser(val name: String? = null) : StandardCommand<User, UserCreated>() {
     override fun events(repository: Repository): EventStream<UserCreated> {
         val userCreated = UserCreated()
-        return EventStream.ofWithState(userCreated, userCreated)
+        val userRenamed = UserRenamed(userCreated.uuid(), name)
+        return EventStream.ofWithState(userCreated, userCreated, userRenamed)
     }
 
     override fun onCompletion(userCreated: UserCreated,
                               repository: Repository): User? {
         return User.lookup(repository, userCreated.uuid())
     }
+
+    override fun toString() = "${javaClass.simpleName}(${uuid()})"
+}
+
+class RenameUser(val id: UUID? = null,
+                 val name: String? = null) : StandardCommand<String, UserRenamed>() {
+    override fun events(repository: Repository): EventStream<UserRenamed> {
+        val userRenamed = UserRenamed(id, name)
+        return EventStream.of(userRenamed)
+    }
+
+    override fun onCompletion(): String? = name
 
     override fun toString() = "${javaClass.simpleName}(${uuid()})"
 }
@@ -104,9 +122,19 @@ class UserCreated : StandardEvent() {
     companion object {
         @Index(EQ, UNIQUE)
         val ID = simpleAttribute<UserCreated, UUID>("id") { it.uuid() }
+    }
+}
+
+class UserRenamed(val id: UUID? = null,
+                  val name: String? = null) : StandardEvent() {
+    override fun toString() = "${javaClass.simpleName}(${uuid()})"
+
+    companion object {
+        @Index(EQ, UNIQUE)
+        val ID = simpleAttribute<UserRenamed, UUID?>("id") { it.id }
 
         @Index(EQ, UNIQUE)
-        val NAME = simpleAttribute<UserCreated, String>("name") { "user" }
+        val NAME = simpleAttribute<UserRenamed, String?>("name") { it.name }
     }
 }
 
