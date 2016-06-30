@@ -7,6 +7,7 @@ import com.eventsourcing.Repository
 import com.eventsourcing.StandardCommand
 import com.eventsourcing.StandardEvent
 import com.eventsourcing.annotations.Index
+import com.eventsourcing.hlc.HybridTimestamp
 import com.eventsourcing.index.IndexEngine.IndexFeature.EQ
 import com.eventsourcing.index.IndexEngine.IndexFeature.UNIQUE
 import com.eventsourcing.index.MemoryIndexEngine
@@ -86,7 +87,10 @@ data class User(override val repository: Repository,
 // COMMANDS.
 //-------------------------------------------------------------------------------------------------
 
-class CreateUser(@param:PropertyName("name") val name: String) : StandardCommand<UserCreated, User>(null) {
+class CreateUser(
+    @param:PropertyName("name") val name: String,
+    @param:PropertyName("timestamp") val timestamp: HybridTimestamp? = null
+) : StandardCommand<UserCreated, User>(timestamp) {
     override fun events(repository: Repository): EventStream<UserCreated> {
         val userCreated = UserCreated()
         val userRenamed = UserRenamed(userCreated.uuid(), name)
@@ -101,8 +105,11 @@ class CreateUser(@param:PropertyName("name") val name: String) : StandardCommand
     override fun toString() = "${javaClass.simpleName}(${uuid()})"
 }
 
-class RenameUser(@param:PropertyName("id") val id: UUID,
-                 @param:PropertyName("name") val name: String) : StandardCommand<UserRenamed, String>(null) {
+class RenameUser(
+    @param:PropertyName("id") val id: UUID,
+    @param:PropertyName("name") val name: String,
+    @param:PropertyName("timestamp") val timestamp: HybridTimestamp? = null
+) : StandardCommand<UserRenamed, String>(timestamp) {
     override fun events(repository: Repository): EventStream<UserRenamed> {
         val userRenamed = UserRenamed(id, name)
         return EventStream.of(userRenamed)
@@ -117,7 +124,9 @@ class RenameUser(@param:PropertyName("id") val id: UUID,
 // EVENTS.
 //-------------------------------------------------------------------------------------------------
 
-class UserCreated : StandardEvent(null) {
+class UserCreated(
+    @param:PropertyName("timestamp") val timestamp: HybridTimestamp? = null
+) : StandardEvent(timestamp) {
     override fun toString() = "${javaClass.simpleName}(${uuid()})"
 
     companion object {
@@ -126,8 +135,11 @@ class UserCreated : StandardEvent(null) {
     }
 }
 
-class UserRenamed(@param:PropertyName("id") val id: UUID,
-                  @param:PropertyName("name") val name: String) : StandardEvent(null) {
+class UserRenamed(
+    @param:PropertyName("id") val id: UUID,
+    @param:PropertyName("name") val name: String,
+    @param:PropertyName("timestamp") val timestamp: HybridTimestamp? = null
+) : StandardEvent(timestamp) {
     override fun toString() = "${javaClass.simpleName}(${uuid()})"
 
     companion object {
