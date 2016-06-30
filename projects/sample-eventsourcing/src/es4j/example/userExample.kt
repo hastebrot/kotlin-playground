@@ -12,6 +12,7 @@ import com.eventsourcing.index.IndexEngine.IndexFeature.UNIQUE
 import com.eventsourcing.index.MemoryIndexEngine
 import com.eventsourcing.index.SimpleAttribute
 import com.eventsourcing.inmem.MemoryJournal
+import com.eventsourcing.layout.PropertyName
 import com.eventsourcing.repository.EntitySubscriber
 import com.googlecode.cqengine.attribute.Attribute
 import com.googlecode.cqengine.query.Query
@@ -39,25 +40,25 @@ import kotlin.reflect.KClass
 
 fun main(args: Array<String>) {
     // The repository glues journals, indexing and subscribers together.
-    val repository = Repository.create()
-    val journal = MemoryJournal()
-//    val journal = MVStoreJournal(MVStore.open("journal.h2"))
-    val index = MemoryIndexEngine()
+    val repository = Repository.create().apply {
+//    journal = MVStoreJournal(MVStore.open("journal.h2"))
+        journal = MemoryJournal()
+        indexEngine = MemoryIndexEngine()
 
-    repository.journal = journal
-    repository.indexEngine = index
-    repository.addEntitySubscriber(object : EntitySubscriber<Entity<*>> {
-        override fun onEntity(entity: EntityHandle<Entity<*>>) {
-            println(entity.optional.orElseGet { null })
-        }
-    })
-    repository.startAsync().awaitRunning()
+        addEntitySubscriber(object : EntitySubscriber<Entity<*>> {
+            override fun onEntity(entity: EntityHandle<Entity<*>>) {
+                println(entity.optional.orElseGet { null })
+            }
+        })
+    }
 
-    val createUser = CreateUser("foobar")
-    val user = repository.publish(createUser).get()
-    println(user)
+    repository.execute {
+        val createUser = CreateUser("foobar")
+        val user = repository.publish(createUser).get()
+        println(user)
+    }
 
-    repository.stopAsync().awaitTerminated()
+    println(repository)
     System.exit(0)
 }
 
@@ -85,29 +86,29 @@ data class User(override val repository: Repository,
 // COMMANDS.
 //-------------------------------------------------------------------------------------------------
 
-class CreateUser(val name: String? = null) : StandardCommand<User, UserCreated>() {
+class CreateUser(@param:PropertyName("name") val name: String) : StandardCommand<UserCreated, User>(null) {
     override fun events(repository: Repository): EventStream<UserCreated> {
         val userCreated = UserCreated()
         val userRenamed = UserRenamed(userCreated.uuid(), name)
         return EventStream.ofWithState(userCreated, userCreated, userRenamed)
     }
 
-    override fun onCompletion(userCreated: UserCreated,
-                              repository: Repository): User? {
+    override fun result(userCreated: UserCreated,
+                        repository: Repository): User? {
         return User.lookup(repository, userCreated.uuid())
     }
 
     override fun toString() = "${javaClass.simpleName}(${uuid()})"
 }
 
-class RenameUser(val id: UUID? = null,
-                 val name: String? = null) : StandardCommand<String, UserRenamed>() {
+class RenameUser(@param:PropertyName("id") val id: UUID,
+                 @param:PropertyName("name") val name: String) : StandardCommand<UserRenamed, String>(null) {
     override fun events(repository: Repository): EventStream<UserRenamed> {
         val userRenamed = UserRenamed(id, name)
         return EventStream.of(userRenamed)
     }
 
-    override fun onCompletion(): String? = name
+    override fun result(): String? = name
 
     override fun toString() = "${javaClass.simpleName}(${uuid()})"
 }
@@ -116,7 +117,7 @@ class RenameUser(val id: UUID? = null,
 // EVENTS.
 //-------------------------------------------------------------------------------------------------
 
-class UserCreated : StandardEvent() {
+class UserCreated : StandardEvent(null) {
     override fun toString() = "${javaClass.simpleName}(${uuid()})"
 
     companion object {
@@ -125,8 +126,8 @@ class UserCreated : StandardEvent() {
     }
 }
 
-class UserRenamed(val id: UUID? = null,
-                  val name: String? = null) : StandardEvent() {
+class UserRenamed(@param:PropertyName("id") val id: UUID,
+                  @param:PropertyName("name") val name: String) : StandardEvent(null) {
     override fun toString() = "${javaClass.simpleName}(${uuid()})"
 
     companion object {
@@ -145,6 +146,12 @@ class UserRenamed(val id: UUID? = null,
 interface Model {
     val repository: Repository
     val id: UUID
+}
+
+inline fun Repository.execute(block: () -> Unit) {
+    startAsync().awaitRunning()
+    block()
+    stopAsync().awaitTerminated()
 }
 
 fun <E : Entity<*>> Repository.query(kClass: KClass<E>,
