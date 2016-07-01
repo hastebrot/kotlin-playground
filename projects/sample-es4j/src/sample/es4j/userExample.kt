@@ -1,4 +1,4 @@
-package es4j.example
+package sample.es4j
 
 import com.eventsourcing.Entity
 import com.eventsourcing.EntityHandle
@@ -164,7 +164,7 @@ inline fun Repository.execute(block: () -> Unit) {
 
 fun <E : Entity<*>> Repository.query(kClass: KClass<E>,
                                      builder: QueryBuilder.() -> Query<EntityHandle<E>>):
-        ResultSet<EntityHandle<E>> {
+    ResultSet<EntityHandle<E>> {
     return query(kClass.java, builder(QueryBuilder()))
 }
 
