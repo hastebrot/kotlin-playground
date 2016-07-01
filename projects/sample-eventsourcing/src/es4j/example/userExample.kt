@@ -7,13 +7,14 @@ import com.eventsourcing.Repository
 import com.eventsourcing.StandardCommand
 import com.eventsourcing.StandardEvent
 import com.eventsourcing.annotations.Index
-import com.eventsourcing.hlc.HybridTimestamp
 import com.eventsourcing.index.IndexEngine.IndexFeature.EQ
 import com.eventsourcing.index.IndexEngine.IndexFeature.UNIQUE
 import com.eventsourcing.index.MemoryIndexEngine
 import com.eventsourcing.index.SimpleAttribute
 import com.eventsourcing.inmem.MemoryJournal
-import com.eventsourcing.layout.PropertyName
+import com.eventsourcing.kotlin.KotlinClassAnalyzer
+import com.eventsourcing.layout.Layout
+import com.eventsourcing.layout.UseClassAnalyzer
 import com.eventsourcing.repository.EntitySubscriber
 import com.googlecode.cqengine.attribute.Attribute
 import com.googlecode.cqengine.query.Query
@@ -56,6 +57,8 @@ fun main(args: Array<String>) {
     repository.execute {
         val createUser = CreateUser("foobar")
         val user = repository.publish(createUser).get()
+
+        println(Layout.forClass(createUser.javaClass))
         println(user)
     }
 
@@ -70,27 +73,25 @@ fun main(args: Array<String>) {
 data class User(override val repository: Repository,
                 override val id: UUID) : Model {
    companion object {
-        fun lookup(repository: Repository,
-                   id: UUID): User? {
-            val result = repository.query(UserCreated::class) {
-                (UserCreated.ID equalTo id) //and (UserRenamed.NAME startsWith "user")
-            }
-            return result.use {
-                val userCreated = it.uniqueResult()
-                User(repository, userCreated.uuid())
-            }
-        }
-    }
+       fun lookup(repository: Repository,
+                  id: UUID): User? {
+           val result = repository.query(UserCreated::class) {
+               (UserCreated.ID equalTo id) //and (UserRenamed.NAME startsWith "user")
+           }
+           return result.use {
+               val userCreated = it.uniqueResult()
+               User(repository, userCreated.uuid())
+           }
+       }
+   }
 }
 
 //-------------------------------------------------------------------------------------------------
 // COMMANDS.
 //-------------------------------------------------------------------------------------------------
 
-class CreateUser(
-    @param:PropertyName("name") val name: String,
-    @param:PropertyName("timestamp") val timestamp: HybridTimestamp? = null
-) : StandardCommand<UserCreated, User>(timestamp) {
+@UseClassAnalyzer(KotlinClassAnalyzer::class)
+class CreateUser(val name: String) : StandardCommand<UserCreated, User>() {
     override fun events(repository: Repository): EventStream<UserCreated> {
         val userCreated = UserCreated()
         val userRenamed = UserRenamed(userCreated.uuid(), name)
@@ -105,11 +106,9 @@ class CreateUser(
     override fun toString() = "${javaClass.simpleName}(${uuid()})"
 }
 
-class RenameUser(
-    @param:PropertyName("id") val id: UUID,
-    @param:PropertyName("name") val name: String,
-    @param:PropertyName("timestamp") val timestamp: HybridTimestamp? = null
-) : StandardCommand<UserRenamed, String>(timestamp) {
+@UseClassAnalyzer(KotlinClassAnalyzer::class)
+class RenameUser(val id: UUID,
+                 val name: String) : StandardCommand<UserRenamed, String>() {
     override fun events(repository: Repository): EventStream<UserRenamed> {
         val userRenamed = UserRenamed(id, name)
         return EventStream.of(userRenamed)
@@ -124,9 +123,8 @@ class RenameUser(
 // EVENTS.
 //-------------------------------------------------------------------------------------------------
 
-class UserCreated(
-    @param:PropertyName("timestamp") val timestamp: HybridTimestamp? = null
-) : StandardEvent(timestamp) {
+@UseClassAnalyzer(KotlinClassAnalyzer::class)
+class UserCreated() : StandardEvent() {
     override fun toString() = "${javaClass.simpleName}(${uuid()})"
 
     companion object {
@@ -135,19 +133,17 @@ class UserCreated(
     }
 }
 
-class UserRenamed(
-    @param:PropertyName("id") val id: UUID,
-    @param:PropertyName("name") val name: String,
-    @param:PropertyName("timestamp") val timestamp: HybridTimestamp? = null
-) : StandardEvent(timestamp) {
+@UseClassAnalyzer(KotlinClassAnalyzer::class)
+class UserRenamed(val id: UUID,
+                  val name: String) : StandardEvent() {
     override fun toString() = "${javaClass.simpleName}(${uuid()})"
 
     companion object {
         @Index(EQ, UNIQUE)
-        val ID = simpleAttribute<UserRenamed, UUID?>("id") { it.id }
+        val ID = simpleAttribute<UserRenamed, UUID>("id") { it.id }
 
         @Index(EQ, UNIQUE)
-        val NAME = simpleAttribute<UserRenamed, String?>("name") { it.name }
+        val NAME = simpleAttribute<UserRenamed, String>("name") { it.name }
     }
 }
 
